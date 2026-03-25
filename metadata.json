@@ -1,0 +1,5 @@
+{
+  "name": "SoloOS",
+  "description": "A command center for a solopreneur managing multiple projects, featuring a dashboard, project tracking, focus mode, and role-based AI suggestions.",
+  "requestFramePermissions": []
+}

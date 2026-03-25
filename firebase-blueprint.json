@@ -1,0 +1,57 @@
+{
+  "entities": {
+    "Project": {
+      "title": "Project",
+      "description": "A project managed by the solopreneur.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the project." },
+        "stage": { "type": "string", "enum": ["idea", "build", "test", "launch", "grow"], "description": "The current stage of the project." },
+        "nextAction": { "type": "string", "description": "The one clear next action for the project." },
+        "status": { "type": "string", "enum": ["active", "paused", "blocked"], "description": "The current status of the project." },
+        "lastProgress": { "type": "string", "format": "date-time", "description": "The timestamp of the last progress made on the project." },
+        "uid": { "type": "string", "description": "The UID of the owner." }
+      },
+      "required": ["name", "stage", "nextAction", "status", "uid"]
+    },
+    "Decision": {
+      "title": "Decision",
+      "description": "A recorded decision in the decision log.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "The title of the decision." },
+        "context": { "type": "string", "description": "The context or reasoning behind the decision." },
+        "outcome": { "type": "string", "description": "The outcome or result of the decision." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the decision was recorded." },
+        "uid": { "type": "string", "description": "The UID of the owner." }
+      },
+      "required": ["title", "timestamp", "uid"]
+    },
+    "Priority": {
+      "title": "Priority",
+      "description": "A daily priority item.",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string", "description": "The priority task description." },
+        "completed": { "type": "boolean", "description": "Whether the priority is completed." },
+        "date": { "type": "string", "format": "date", "description": "The date for this priority." },
+        "uid": { "type": "string", "description": "The UID of the owner." }
+      },
+      "required": ["text", "completed", "date", "uid"]
+    }
+  },
+  "firestore": {
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Collection of projects."
+    },
+    "/decisions/{decisionId}": {
+      "schema": "Decision",
+      "description": "Collection of decisions."
+    },
+    "/priorities/{priorityId}": {
+      "schema": "Priority",
+      "description": "Collection of daily priorities."
+    }
+  }
+}

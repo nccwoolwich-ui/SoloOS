@@ -1,0 +1,132 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: projects
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required, 1-100 chars)
+    //   - stage: string (required, enum: idea, build, test, launch, grow)
+    //   - nextAction: string (required, 1-200 chars)
+    //   - status: string (required, enum: active, paused, blocked)
+    //   - lastProgress: timestamp (optional)
+    //   - uid: string (required, matches owner)
+    //
+    // Collection: decisions
+    // Document ID: auto-generated
+    // Fields:
+    //   - title: string (required, 1-100 chars)
+    //   - context: string (optional, 0-1000 chars)
+    //   - outcome: string (optional, 0-1000 chars)
+    //   - timestamp: timestamp (required)
+    //   - uid: string (required, matches owner)
+    //
+    // Collection: priorities
+    // Document ID: auto-generated
+    // Fields:
+    //   - text: string (required, 1-100 chars)
+    //   - completed: bool (required)
+    //   - date: string (required, YYYY-MM-DD)
+    //   - uid: string (required, matches owner)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "nccwoolwich@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidProject(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.stage in ['idea', 'build', 'test', 'launch', 'grow'] &&
+             data.nextAction is string && data.nextAction.size() > 0 && data.nextAction.size() <= 200 &&
+             data.status in ['active', 'paused', 'blocked'] &&
+             (!('lastProgress' in data) || data.lastProgress is timestamp);
+    }
+
+    function isValidDecision(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+             (!('context' in data) || (data.context is string && data.context.size() <= 1000)) &&
+             (!('outcome' in data) || (data.outcome is string && data.outcome.size() <= 1000)) &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidPriority(data) {
+      return data.text is string && data.text.size() > 0 && data.text.size() <= 100 &&
+             data.completed is bool &&
+             data.date is string && data.date.matches("^\\d{4}-\\d{2}-\\d{2}$");
+    }
+
+    // ===============================================================
+    // Match Rules
+    // ===============================================================
+
+    match /projects/{projectId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidProject(request.resource.data) && uidUnchanged();
+      allow update: if isDocOwner() && isValidProject(request.resource.data) && uidNotModified();
+      allow delete: if isDocOwner();
+    }
+
+    match /decisions/{decisionId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidDecision(request.resource.data) && uidUnchanged();
+      allow update: if isDocOwner() && isValidDecision(request.resource.data) && uidNotModified();
+      allow delete: if isDocOwner();
+    }
+
+    match /priorities/{priorityId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidPriority(request.resource.data) && uidUnchanged();
+      allow update: if isDocOwner() && isValidPriority(request.resource.data) && uidNotModified();
+      allow delete: if isDocOwner();
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.role == 'user';
+      allow update: if isOwner(userId) && request.resource.data.role == resource.data.role;
+    }
+  }
+}
